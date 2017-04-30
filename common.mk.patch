@@ -1,0 +1,60 @@
+--- common.mk	2017-04-30 07:58:58.414511602 -0400
++++ cpi-test-common.mk	2017-04-29 15:12:59.684110000 -0400
+@@ -257,7 +257,7 @@
+ 
+ OPTEE_OS_CLEAN_COMMON_FLAGS ?= $(OPTEE_OS_COMMON_EXTRA_FLAGS)
+ 
+-optee-os-clean-common: xtest-clean helloworld-clean
++optee-os-clean-common: xtest-clean helloworld-clean cpitest-clean
+ 	$(MAKE) -C $(OPTEE_OS_PATH) $(OPTEE_OS_CLEAN_COMMON_FLAGS) clean
+ 
+ OPTEE_CLIENT_COMMON_FLAGS ?= CROSS_COMPILE=$(CROSS_COMPILE_NS_USER)
+@@ -313,6 +313,23 @@
+ 	$(MAKE) -C $(HELLOWORLD_PATH) $(HELLOWORLD_CLEAN_COMMON_FLAGS) clean
+ 
+ ################################################################################
++# cpi
++################################################################################
++CPITEST_PATH			?= $(ROOT)/cpi_test
++CPITEST_COMMON_FLAGS ?= HOST_CROSS_COMPILE=$(CROSS_COMPILE_NS_USER)\
++	TA_CROSS_COMPILE=$(CROSS_COMPILE_S_USER) \
++	TA_DEV_KIT_DIR=$(OPTEE_OS_TA_DEV_KIT_DIR) \
++	TEEC_EXPORT=$(OPTEE_CLIENT_EXPORT)
++
++cpitest-common: optee-os optee-client
++	$(MAKE) -C $(CPITEST_PATH) $(CPITEST_COMMON_FLAGS)
++
++CPITEST_CLEAN_COMMON_FLAGS ?= TA_DEV_KIT_DIR=$(OPTEE_OS_TA_DEV_KIT_DIR)
++
++cpitest-clean-common:
++	$(MAKE) -C $(CPITEST_PATH) $(CPITEST_CLEAN_COMMON_FLAGS) clean
++
++################################################################################
+ # rootfs
+ ################################################################################
+ update_rootfs-common: busybox filelist-tee
+@@ -329,7 +346,7 @@
+ 	rm -f $(GEN_ROOTFS_FILELIST)
+ 
+ filelist-tee-common: fl:=$(GEN_ROOTFS_FILELIST)
+-filelist-tee-common: optee-client xtest helloworld
++filelist-tee-common: optee-client xtest helloworld cpitest
+ 	@echo "# filelist-tee-common /start" 				> $(fl)
+ 	@echo "dir /lib/optee_armtz 755 0 0" 				>> $(fl)
+ 	@echo "# xtest / optee_test" 					>> $(fl)
+@@ -345,6 +362,15 @@
+ 			"$(HELLOWORLD_PATH)/ta/8aaaf200-2450-11e4-abe2-0002a5d5c51b.ta" \
+ 			"444 0 0" 					>> $(fl); \
+ 	fi
++
++	@if [ -e $(CPITEST_PATH)/host/test_function_call_client ]; then \
++		echo "file /bin/test_function_call_client" \
++			"$(CPITEST_PATH)/host/test_function_call_client 755 0 0"	>> $(fl); \
++		echo "file /lib/optee_armtz/08430668-3463-4c83-9593-a18350f54b57.ta" \
++			"$(CPITEST_PATH)/ta/08430668-3463-4c83-9593-a18350f54b57.ta" \
++			"444 0 0" 					>> $(fl); \
++	fi
++
+ 	@if [ "$(QEMU_USERNET_ENABLE)" = "y" ]; then \
+ 		echo "slink /etc/rc.d/S02_udhcp_networking /etc/init.d/udhcpc 755 0 0" \
+ 		>> $(fl); \
